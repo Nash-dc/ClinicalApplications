@@ -1,8 +1,4 @@
-# Clinical Applications – Breast Cancer Cardiotoxicity Risk Prediction
-
-This repository is part of a larger research project on **Personalized Federated Learning and Clinical Applications**.  
-Within this project, the **PredictModel** component focuses on estimating the **risk of cardiotoxicity** in breast cancer patients based on clinical variables.  
-
+# Clinical Applications
 ---
 
 ## 📂 Project Structure
@@ -20,13 +16,12 @@ ClinicalApplications/
 │       │   └── ...
 │       └── BC_cardiotox_clinical_variables.csv
 │
-├── ClinicalApplications/         # Avalonia .NET frontend
-│   ├── Models/
+├── Models/
 │   │   ├── Patient.cs
 │   │   └── CtrcdRiskClient.cs
-│   ├── Views/
-│   ├── ViewModels/
-│   └── ClinicalApplications.csproj
+├── Views/
+│── ViewModels/
+└── ClinicalApplications.csproj
 │
 ├── README.md                     # This file
 └── .gitignore
@@ -37,7 +32,7 @@ ClinicalApplications/
 ## ⚙️ Requirements
 
 - **Python 3.10+**
-- **.NET 8.0 SDK**
+- **.NET 9.0 SDK**
 - **Visual Studio 2022** (Community edition is fine)
 - **Node.js** (optional, for Avalonia Designer hot reload)
 
@@ -93,11 +88,6 @@ ClinicalApplications/
 ## 🔑 Note on GPTKey
 
 This project uses GPT-based components, but **the GPTKey is not included** in this repository for security reasons.  
-If you need access to GPT functionality, please set your API key as an environment variable:
-
-```powershell
-setx GPTKEY "your_api_key_here"
-```
 
 ---
 
