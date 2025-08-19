@@ -1,0 +1,25 @@
+Model: random_forest
+ROC-AUC: 0.7311
+PR-AUC: 0.3812
+
+=== Report @ threshold 0.5 ===
+              precision    recall  f1-score   support
+
+         0.0      0.913     0.979     0.945        96
+         1.0      0.500     0.182     0.267        11
+
+    accuracy                          0.897       107
+   macro avg      0.706     0.580     0.606       107
+weighted avg      0.870     0.897     0.875       107
+
+
+=== Report @ best-F1 threshold=0.395 ===
+              precision    recall  f1-score   support
+
+         0.0      0.937     0.927     0.932        96
+         1.0      0.417     0.455     0.435        11
+
+    accuracy                          0.879       107
+   macro avg      0.677     0.691     0.683       107
+weighted avg      0.883     0.879     0.881       107
+

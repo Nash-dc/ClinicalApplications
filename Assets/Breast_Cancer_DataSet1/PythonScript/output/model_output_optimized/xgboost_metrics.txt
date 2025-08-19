@@ -1,0 +1,25 @@
+Model: xgboost
+ROC-AUC: 0.6884
+PR-AUC: 0.4033
+
+=== Report @ threshold 0.5 ===
+              precision    recall  f1-score   support
+
+         0.0      0.929     0.948     0.938        96
+         1.0      0.444     0.364     0.400        11
+
+    accuracy                          0.888       107
+   macro avg      0.687     0.656     0.669       107
+weighted avg      0.879     0.888     0.883       107
+
+
+=== Report @ best-F1 threshold=0.285 ===
+              precision    recall  f1-score   support
+
+         0.0      0.944     0.885     0.914        96
+         1.0      0.353     0.545     0.429        11
+
+    accuracy                          0.850       107
+   macro avg      0.649     0.715     0.671       107
+weighted avg      0.884     0.850     0.864       107
+

@@ -1,0 +1,25 @@
+Model: logistic
+ROC-AUC: 0.6875
+PR-AUC: 0.3473
+
+=== Report @ threshold 0.5 ===
+              precision    recall  f1-score   support
+
+         0.0      0.939     0.802     0.865        96
+         1.0      0.240     0.545     0.333        11
+
+    accuracy                          0.776       107
+   macro avg      0.590     0.674     0.599       107
+weighted avg      0.867     0.776     0.810       107
+
+
+=== Report @ best-F1 threshold=0.562 ===
+              precision    recall  f1-score   support
+
+         0.0      0.943     0.865     0.902        96
+         1.0      0.316     0.545     0.400        11
+
+    accuracy                          0.832       107
+   macro avg      0.629     0.705     0.651       107
+weighted avg      0.879     0.832     0.851       107
+
