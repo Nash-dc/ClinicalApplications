@@ -13,6 +13,7 @@ namespace ClinicalApplications.Models
     {
         private readonly HttpClient _http;
         private readonly string _endpoint;
+
         private static readonly JsonSerializerOptions _jsonOpts = new()
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -28,10 +29,23 @@ namespace ClinicalApplications.Models
             _endpoint = endpoint?.TrimEnd('/') ?? throw new ArgumentNullException(nameof(endpoint));
             _http = http ?? new HttpClient();
         }
-        public async Task<RiskResult> PredictAsync(
-            Dictionary<string, object> patientData,
-            double? threshold = null,
-            CancellationToken ct = default)
+
+        public Task<RiskResult> PredictAsync(Patient patient, double? threshold = null, CancellationToken ct = default)
+        {
+            if (patient == null) throw new ArgumentNullException(nameof(patient));
+
+            var payload = new
+            {
+                data = patient,          
+                threshold = threshold
+            };
+            return PostJsonAsync(payload, ct);
+        }
+
+        /// <summary>
+        /// 兼容旧版：使用字典调用
+        /// </summary>
+        public Task<RiskResult> PredictAsync(Dictionary<string, object> patientData, double? threshold = null, CancellationToken ct = default)
         {
             if (patientData is null || patientData.Count == 0)
                 throw new ArgumentException("patientData is empty.");
@@ -41,7 +55,11 @@ namespace ClinicalApplications.Models
                 data = patientData,
                 threshold = threshold
             };
+            return PostJsonAsync(payload, ct);
+        }
 
+        private async Task<RiskResult> PostJsonAsync(object payload, CancellationToken ct)
+        {
             var json = JsonSerializer.Serialize(payload, _jsonOpts);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
             using var resp = await _http.PostAsync(_endpoint, content, ct).ConfigureAwait(false);
@@ -53,6 +71,9 @@ namespace ClinicalApplications.Models
             return result;
         }
 
+        /// <summary>
+        /// Check if FastAPI is ready
+        /// </summary>
         public async Task<bool> HealthAsync(string healthUrl = "http://127.0.0.1:8000/health", CancellationToken ct = default)
         {
             try
