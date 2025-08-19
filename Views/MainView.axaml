@@ -5,18 +5,27 @@
     x:Class="ClinicalApplications.Views.MainView"
     x:DataType="vm:MainViewViewModel">
 
-  <Grid RowDefinitions="Auto,Auto,*" Margin="16" ColumnDefinitions="*,Auto">
-    <TextBox Grid.Row="0" Grid.ColumnSpan="2"
+  <Grid Margin="16"
+        RowDefinitions="Auto,*,Auto"
+        ColumnDefinitions="Auto,*,Auto">
+
+    <Button Grid.Row="0" Grid.Column="0"
+            Content="Upload CSV"
+            Click="OnUploadCsvClicked"
+            HorizontalAlignment="Left"
+            Margin="0,0,8,8"/>
+
+    <TextBox Grid.Row="0" Grid.Column="1"
              Text="{Binding Prompt, Mode=TwoWay}"
              Watermark="Type your prompt here..."
              MinWidth="400" Margin="0,0,0,8"/>
 
-    <Button Grid.Row="1" Grid.Column="1"
+    <Button Grid.Row="0" Grid.Column="2"
             Content="Send to GPT"
             Command="{Binding SendRequestCommand}"
             HorizontalAlignment="Right" Margin="8,0,0,8"/>
 
-    <TextBox Grid.Row="2" Grid.ColumnSpan="2"
+    <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
              Text="{Binding Reply}"
              AcceptsReturn="True"
              IsReadOnly="True"
@@ -24,5 +33,9 @@
              MinHeight="200"
              ScrollViewer.VerticalScrollBarVisibility="Auto"
              ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+
+    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+               Margin="0,8,0,0"
+               Text="{Binding StatusMessage}"/>
   </Grid>
 </UserControl>
