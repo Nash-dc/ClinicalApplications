@@ -42,8 +42,44 @@ namespace ClinicalApplications.ViewModels
                     Reply = "Error: " + ex.Message;
                 }
             });
+            TestRiskClient();
         }
+        private async void TestRiskClient()
+        {
+            var client = new ClinicalApplications.Models.CtrcdRiskClient();
+            var patient = new ClinicalApplications.Models.Patient
+            {
+                Age = 58,
+                Weight = 70,
+                Height = 165,
+                LVEF = 55,
+                HeartRate = 72,
+                HeartRhythm = 0,
+                PWT = 1.1,
+                LAd = 3.8,
+                LVDd = 4.8,
+                LVSd = 3.1,
+                AC = 1,
+                AntiHER2 = 1,
+                ACprev = 0,
+                AntiHER2prev = 0,
+                HTA = 1,
+                DL = 0,
+                DM = 0,
+                Smoker = 0,
+                ExSmoker = 1,
+                RTprev = 0,
+                CIprev = 0,
+                ICMprev = 0,
+                ARRprev = 0,
+                VALVprev = 0,
+                Cxvalv = 0
+            };
 
+            var res = await client.PredictAsync(patient, threshold: 0.28);
+            Reply = $"Probability: {res.Prob}, Probability: {res.Pred}, Threshold: {res.Threshold}";
+
+        }
 
         protected bool SetProperty<T>(ref T storage, T value, string propertyName = null)
         {
