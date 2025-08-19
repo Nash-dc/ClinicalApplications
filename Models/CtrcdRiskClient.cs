@@ -42,9 +42,7 @@ namespace ClinicalApplications.Models
             return PostJsonAsync(payload, ct);
         }
 
-        /// <summary>
-        /// 兼容旧版：使用字典调用
-        /// </summary>
+  
         public Task<RiskResult> PredictAsync(Dictionary<string, object> patientData, double? threshold = null, CancellationToken ct = default)
         {
             if (patientData is null || patientData.Count == 0)
