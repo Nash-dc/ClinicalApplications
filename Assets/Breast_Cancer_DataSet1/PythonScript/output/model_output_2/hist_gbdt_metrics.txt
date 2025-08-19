@@ -1,0 +1,25 @@
+Model: hist_gbdt
+ROC-AUC: 0.7131
+PR-AUC: 0.4116
+
+=== Report @ threshold 0.5 ===
+              precision    recall  f1-score   support
+
+         0.0      0.905     0.990     0.945        96
+         1.0      0.500     0.091     0.154        11
+
+    accuracy                          0.897       107
+   macro avg      0.702     0.540     0.550       107
+weighted avg      0.863     0.897     0.864       107
+
+
+=== Report @ best-F1 threshold=0.264 ===
+              precision    recall  f1-score   support
+
+         0.0      0.938     0.948     0.943        96
+         1.0      0.500     0.455     0.476        11
+
+    accuracy                          0.897       107
+   macro avg      0.719     0.701     0.710       107
+weighted avg      0.893     0.897     0.895       107
+
