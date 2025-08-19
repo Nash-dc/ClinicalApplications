@@ -59,7 +59,6 @@ namespace ClinicalApplications.ViewModels
                     Reply = "Error: " + ex.Message;
                 }
             });
-            TestRiskClient();
         }
         private async void TestRiskClient()
         {

@@ -6,9 +6,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using ClinicalApplications.ViewModels;
-{
-    
-}
+
 
 namespace ClinicalApplications.Views
 {
@@ -17,6 +15,7 @@ namespace ClinicalApplications.Views
         public MainView()
         {
             InitializeComponent();
+            DataContext = new MainViewViewModel();
         }
 
         private async void OnUploadCsvClicked(object? sender, RoutedEventArgs e)
