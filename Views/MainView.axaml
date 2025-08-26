@@ -5,37 +5,113 @@
     x:Class="ClinicalApplications.Views.MainView"
     x:DataType="vm:MainViewViewModel">
 
-  <Grid Margin="16"
-        RowDefinitions="Auto,*,Auto"
-        ColumnDefinitions="Auto,*,Auto">
+  <DockPanel LastChildFill="True">
 
-    <Button Grid.Row="0" Grid.Column="0"
-            Content="Upload CSV"
-            Click="OnUploadCsvClicked"
-            HorizontalAlignment="Left"
-            Margin="0,0,8,8"/>
+    <!-- 顶部工具栏 -->
+    <Border DockPanel.Dock="Top" Background="#F7F7F9" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="8">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Spacing="8">
+        <Button Content="Upload CSV" Click="OnUploadCsvClicked"/>
+        <Button Content="Generate Plan" Command="{Binding SendRequestCommand}"/>
+        <TextBlock Text="{Binding StatusMessage}" Opacity="0.9" VerticalAlignment="Center" Margin="12,0,0,0"/>
+      </StackPanel>
+    </Border>
 
-    <TextBox Grid.Row="0" Grid.Column="1"
-             Text="{Binding Prompt, Mode=TwoWay}"
-             Watermark="Type your prompt here..."
-             MinWidth="400" Margin="0,0,0,8"/>
+    <!-- 主体区域，上下滚动 -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <Grid ColumnDefinitions="1*,1*" Margin="12">
+        <!-- 左：患者信息 -->
+        <StackPanel Grid.Column="0" Spacing="12">
+          <Border CornerRadius="8" Padding="8" BorderThickness="1" BorderBrush="#E3E6EA" Background="#FFFFFFFF">
+            <DataGrid ItemsSource="{Binding PatientDisplay}"
+                      IsReadOnly="True"
+                      AutoGenerateColumns="False"
+                      HeadersVisibility="Column"
+                      CanUserReorderColumns="False"
+                      CanUserResizeColumns="True"
+                      CanUserSortColumns="False"
+                      MinHeight="160" MaxHeight="280">
+              <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Field" Width="2*">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Label}">
+                        <ToolTip.Tip>
+                          <TextBlock Text="{Binding Tooltip}" TextWrapping="Wrap" MaxWidth="360"/>
+                        </ToolTip.Tip>
+                      </TextBlock>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </Border>
 
-    <Button Grid.Row="0" Grid.Column="2"
-            Content="Send to GPT"
-            Command="{Binding SendRequestCommand}"
-            HorizontalAlignment="Right" Margin="8,0,0,8"/>
+          <Border CornerRadius="10" Padding="12" BorderThickness="1" BorderBrush="#E3E6EA" Background="#FAFBFF">
+            <StackPanel>
+              <TextBlock Text="Cardiotoxicity (CTRCD) Risk" FontWeight="SemiBold"/>
+              <TextBox Text="{Binding CtrcdSummary}" IsReadOnly="True" TextWrapping="Wrap" Margin="0,8,0,4" MinHeight="44" Background="#FFFFFFFF"/>
+              <TextBlock Text="{Binding CtrcdDetail}" IsVisible="{Binding IsCtrcdDetailVisible}" Opacity="0.9" TextWrapping="Wrap"/>
+              <TextBlock Text="ⓘ CTRCD: Cancer Therapy–Related Cardiac Dysfunction." Foreground="#6B7280" FontSize="12" Margin="0,8,0,0"/>
+            </StackPanel>
+          </Border>
+        </StackPanel>
 
-    <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-             Text="{Binding Reply}"
-             AcceptsReturn="True"
-             IsReadOnly="True"
-             TextWrapping="Wrap"
-             MinHeight="200"
-             ScrollViewer.VerticalScrollBarVisibility="Auto"
-             ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+        <!-- 右：AI Plan -->
+        <StackPanel Grid.Column="1" Spacing="12">
+          <Border CornerRadius="10" Padding="12" BorderThickness="1" BorderBrush="#D9E6FF" Background="#F0F6FF">
+            <StackPanel>
+              <TextBlock Text="AI Weekly Exercise Plan" FontWeight="Bold" FontSize="14"/>
+              <TextBlock Text="{Binding NoPlanText}" IsVisible="{Binding NoPlan}" Foreground="#7A7A7A" Margin="0,6,0,0"/>
+              <DataGrid ItemsSource="{Binding PlanWeek}"
+                        IsVisible="{Binding HasPlan}"
+                        IsReadOnly="True"
+                        AutoGenerateColumns="False"
+                        HeadersVisibility="Column"
+                        CanUserReorderColumns="False"
+                        CanUserResizeColumns="True"
+                        CanUserSortColumns="False"
+                        GridLinesVisibility="None"
+                        Margin="0,8,0,0"
+                        Background="#FFFFFFFF">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Day" Binding="{Binding day}" Width="*" />
+                  <DataGridTextColumn Header="Steps" Binding="{Binding steps}" Width="*" />
+                  <DataGridTextColumn Header="Active (min)" Binding="{Binding active_minutes}" Width="*" />
+                  <DataGridTextColumn Header="RPE" Binding="{Binding rpe}" Width="*" />
+                </DataGrid.Columns>
+              </DataGrid>
+            </StackPanel>
+          </Border>
 
-    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
-               Margin="0,8,0,0"
-               Text="{Binding StatusMessage}"/>
-  </Grid>
+          <Border CornerRadius="10" Padding="12" BorderThickness="1" BorderBrush="#FFE2C2" Background="#FFF9EE">
+            <StackPanel>
+              <TextBlock Text="Safety Notes" FontWeight="Bold" FontSize="14"/>
+              <ItemsControl ItemsSource="{Binding SafetyNotes}" IsVisible="{Binding HasPlan}" Margin="0,6,0,0">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Background="#FFEED6" CornerRadius="999" Padding="8,4" Margin="0,6,6,0" BorderBrush="#FFD7A8" BorderThickness="1">
+                      <TextBlock Text="{Binding}"/>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <Border CornerRadius="10" Padding="10" BorderThickness="1" BorderBrush="#FFB8B8" Background="#FFF0F0">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="⚠" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <TextBlock Text="{Binding PauseRule}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Grid>
+    </ScrollViewer>
+  </DockPanel>
 </UserControl>

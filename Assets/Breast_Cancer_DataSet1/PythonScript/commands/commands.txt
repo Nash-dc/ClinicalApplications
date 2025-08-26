@@ -1,0 +1,1 @@
+python export_patients_as_csv.py --input ../BC_cardiotox_clinical_variables.csv --outdir ./patients

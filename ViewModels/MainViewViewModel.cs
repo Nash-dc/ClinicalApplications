@@ -1,52 +1,119 @@
 ﻿using ClinicalApplications.Models;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Threading.Tasks;
 using System.IO;
-using System.Windows.Input;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace ClinicalApplications.ViewModels
 {
     public partial class MainViewViewModel : ViewModelBase
     {
         private readonly GPTRequests _gptRequests;
+        private readonly PlanGuardrails _guard;
+        private readonly CtrcdRiskClient _riskClient;
+        public ObservableCollection<DisplayField> PatientDisplay { get; } = new();
+        private Patient? _selectedPatient;
+        public Patient? SelectedPatient
+        {
+            get => _selectedPatient;
+            set
+            {
+                if (SetProperty(ref _selectedPatient, value))
+                {
+                    UpdatePatientDisplay();
+                }
+            }
+        }
+        private static string F(double v) => double.IsNaN(v) ? "" : v.ToString("0.###", CultureInfo.InvariantCulture);
+        private static string I(int v) => v.ToString(CultureInfo.InvariantCulture);
 
-        private string _prompt = "Generate a simple weekly walking plan for a breast cancer survivor after surgery.";
+        private string _prompt = "";
         public string Prompt
         {
             get => _prompt;
             set => SetProperty(ref _prompt, value);
         }
 
-        private string _reply;
-        public string Reply
+        private string? _reply;
+        public string? Reply
         {
             get => _reply;
             set => SetProperty(ref _reply, value);
         }
-        private Patient? _selectedPatient;
-        public Patient? SelectedPatient
-        {
-            get => _selectedPatient;
-            set => SetProperty(ref _selectedPatient, value);
-        }
-
         private string? _statusMessage;
         public string? StatusMessage
         {
             get => _statusMessage;
             set => SetProperty(ref _statusMessage, value);
         }
+        private string _ctrcdSummary = "No prediction yet";
+        public string CtrcdSummary
+        {
+            get => _ctrcdSummary;
+            set => SetProperty(ref _ctrcdSummary, value);
+        }
+
+        private string _ctrcdDetail = "";
+        public string CtrcdDetail
+        {
+            get => _ctrcdDetail;
+            set
+            {
+                if (SetProperty(ref _ctrcdDetail, value))
+                    OnPropertyChanged(nameof(IsCtrcdDetailVisible));
+            }
+        }
+
+        public bool IsCtrcdDetailVisible => !string.IsNullOrWhiteSpace(_ctrcdDetail);
+
 
         public ICommand SendRequestCommand { get; }
+        private PlanJson? _plan;
+        public PlanJson? Plan
+        {
+            get => _plan;
+            set
+            {
+                if (SetProperty(ref _plan, value))
+                {
+                    PlanWeek.Clear();
+                    SafetyNotes.Clear();
+                    if (value?.week != null)
+                        foreach (var d in value.week) PlanWeek.Add(d);
+                    if (value?.safety_notes != null)
+                        foreach (var s in value.safety_notes) SafetyNotes.Add(s);
+                    PauseRule = value?.pause_rule ?? "";
+                    OnPropertyChanged(nameof(HasPlan));
+                    OnPropertyChanged(nameof(NoPlan));
+                    OnPropertyChanged(nameof(NoPlanText));
+                }
+            }
+        }
 
+        public ObservableCollection<DayPlan> PlanWeek { get; } = new();
+        public ObservableCollection<string> SafetyNotes { get; } = new();
+
+        private string _pauseRule = "";
+        public bool NoPlan => !HasPlan;
+
+        public string PauseRule
+        {
+            get => _pauseRule;
+            set => SetProperty(ref _pauseRule, value);
+        }
+
+        public bool HasPlan => PlanWeek.Count > 0;
+        public string NoPlanText => HasPlan ? "" : "No AI plan yet. Upload patient CSV to generate.";
         public MainViewViewModel()
         {
 
             _gptRequests = new GPTRequests("gpt-5");
-
+            _guard = new PlanGuardrails { MaxDailySteps = 9000, MaxDailyActiveMinutes = 40, MaxRpe = 5, MaxWeeklyIncreasePercent = 15 };
+            _riskClient = new CtrcdRiskClient();
             SendRequestCommand = new AsyncRelayCommand(async () =>
             {
                 try
@@ -60,42 +127,37 @@ namespace ClinicalApplications.ViewModels
                 }
             });
         }
-        private async void TestRiskClient()
+        private async void AskRiskClient()
         {
-            var client = new ClinicalApplications.Models.CtrcdRiskClient();
-            var patient = new ClinicalApplications.Models.Patient
+            if (SelectedPatient is not null)
             {
-                Age = 58,
-                Weight = 70,
-                Height = 165,
-                LVEF = 55,
-                HeartRate = 72,
-                HeartRhythm = 0,
-                PWT = 1.1,
-                LAd = 3.8,
-                LVDd = 4.8,
-                LVSd = 3.1,
-                AC = 1,
-                AntiHER2 = 1,
-                ACprev = 0,
-                AntiHER2prev = 0,
-                HTA = 1,
-                DL = 0,
-                DM = 0,
-                Smoker = 0,
-                ExSmoker = 1,
-                RTprev = 0,
-                CIprev = 0,
-                ICMprev = 0,
-                ARRprev = 0,
-                VALVprev = 0,
-                Cxvalv = 0
-            };
-
-            var res = await client.PredictAsync(patient, threshold: 0.28);
-            Reply = $"Probability: {res.Prob}, Probability: {res.Pred}, Threshold: {res.Threshold}";
-
+                var res = await _riskClient.PredictAsync(SelectedPatient, threshold: 0.28);
+                CtrcdSummary = $"{res.Prob}";
+            }
         }
+        private async void AskGPT()
+        {
+            try
+            {
+                Reply = "Analyzing...";
+                var pj = await _gptRequests.GeneratePlanStructuredAsync(
+                            patient: SelectedPatient!,
+                            guardrails: _guard,
+                            avgStepsPerDay: 4500,
+                            avgActiveMinutesPerDay: 22,
+                            avgRestingHr: 72,
+                            avgFatigueScore: 2,
+                            baselineCapacity: "walks 15–20 min/day",
+                            extraRestrictions: new[] { "post-surgery scar discomfort" }
+                            );
+                Plan = pj;
+            }
+            catch (Exception ex)
+            {
+                Reply = "Error: " + ex.Message;
+            }
+        }
+
         public async Task LoadPatientFromCsvAsync(string path)
         {
             try
@@ -152,6 +214,9 @@ namespace ClinicalApplications.ViewModels
                 };
 
                 SelectedPatient = p;
+                UpdatePatientDisplay();
+                AskRiskClient();
+                AskGPT();
                 StatusMessage = $"Loaded patient from CSV: Age={p.Age}, LVEF={p.LVEF}";
             }
             catch (Exception ex)
@@ -159,7 +224,41 @@ namespace ClinicalApplications.ViewModels
                 StatusMessage = "CSV parse error: " + ex.Message;
             }
         }
+        public void UpdatePatientDisplay()
+        {
+            PatientDisplay.Clear();
+            var p = SelectedPatient;
+            if (p is null) return;
 
+            void Add(string label, string val, string tip)
+                => PatientDisplay.Add(new DisplayField { Label = label, Value = val, Tooltip = tip });
+
+            Add("Age (years)", I(p.Age), "Patient age in years. Higher age is associated with higher cardiotoxicity risk.");
+            Add("Weight (kg)", F(p.Weight), "Body weight in kilograms. Used to calculate BMI and assess metabolic health.");
+            Add("Height (cm)", F(p.Height), "Body height in centimeters. Used with weight to compute BMI.");
+            Add("LVEF (%)", F(p.LVEF), "Left Ventricular Ejection Fraction. Lower values indicate impaired cardiac function.");
+            Add("Heart rate (bpm)", I(p.HeartRate), "Resting heart rate (beats per minute). Tachycardia/bradycardia may signal stress.");
+            Add("Heart rhythm (0/1)", I(p.HeartRhythm), "0 = sinus rhythm; 1 = atrial fibrillation. AF increases complications risk.");
+            Add("PWT (cm)", F(p.PWT), "Posterior Wall Thickness of LV. Hypertrophy may reflect chronic stress.");
+            Add("LAd (cm)", F(p.LAd), "Left Atrial diameter. Enlargement suggests chronic pressure/volume overload.");
+            Add("LVDd (cm)", F(p.LVDd), "Left Ventricular Diastolic diameter. Chamber size during relaxation/diastole.");
+            Add("LVSd (cm)", F(p.LVSd), "Left Ventricular Systolic diameter. Larger values may reflect poor contractility.");
+            Add("AC (0/1)", I(p.AC), "Current anthracycline therapy. Anthracyclines are strongly cardiotoxic.");
+            Add("antiHER2 (0/1)", I(p.AntiHER2), "Current anti-HER2 therapy (e.g., trastuzumab). Associated with LV dysfunction.");
+            Add("ACprev (0/1)", I(p.ACprev), "History of anthracycline exposure. Cumulative exposure increases risk.");
+            Add("antiHER2prev (0/1)", I(p.AntiHER2prev), "History of anti-HER2 therapy. Past exposure may leave residual injury.");
+            Add("HTA (0/1)", I(p.HTA), "Hypertension. A known comorbidity increasing vulnerability.");
+            Add("DL (0/1)", I(p.DL), "Dyslipidemia. Contributes to atherosclerosis and cardiac risk.");
+            Add("DM (0/1)", I(p.DM), "Diabetes mellitus. Strong risk factor for cardiovascular disease.");
+            Add("Smoker (0/1)", I(p.Smoker), "Current smoking status. Harms vascular and cardiac function.");
+            Add("Ex-smoker (0/1)", I(p.ExSmoker), "Former smoker status. Residual risk may remain.");
+            Add("RTprev (0/1)", I(p.RTprev), "Previous thoracic radiotherapy. Radiation can induce cardiotoxicity.");
+            Add("CIprev (0/1)", I(p.CIprev), "Previous cardiac insufficiency (heart failure). Strong predictor of decline.");
+            Add("ICMprev (0/1)", I(p.ICMprev), "Previous ischemic cardiomyopathy. Indicates established coronary disease.");
+            Add("ARRprev (0/1)", I(p.ARRprev), "Previous arrhythmia. Electrical instability under therapy.");
+            Add("VALVprev (0/1)", I(p.VALVprev), "Previous valvulopathy. Valve disease worsens chemo-related dysfunction.");
+            Add("cxvalv (0/1)", I(p.Cxvalv), "Previous valve surgery. Reflects significant prior cardiac intervention.");
+        }
         private static int GetInt(Dictionary<string, string> d, string key, int def = 0)
         {
             if (d.TryGetValue(key, out var s) && int.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
@@ -178,7 +277,7 @@ namespace ClinicalApplications.ViewModels
             return def;
         }
 
-        protected bool SetProperty<T>(ref T storage, T value, string propertyName = null)
+        protected bool SetProperty<T>(ref T storage, T value, string? propertyName = null)
         {
             if (Equals(storage, value)) return false;
             storage = value;
@@ -210,5 +309,7 @@ namespace ClinicalApplications.ViewModels
             try { await _execute(); }
             finally { _isExecuting = false; CanExecuteChanged?.Invoke(this, EventArgs.Empty); }
         }
+
     }
+        
 }
