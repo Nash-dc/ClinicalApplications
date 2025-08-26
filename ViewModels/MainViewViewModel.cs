@@ -13,6 +13,7 @@ namespace ClinicalApplications.ViewModels
     public partial class MainViewViewModel : ViewModelBase
     {
         private readonly GPTRequests _gptRequests;
+        private readonly PlanGuardrails _guard;
         private readonly CtrcdRiskClient _riskClient;
         public ObservableCollection<DisplayField> PatientDisplay { get; } = new();
         private Patient? _selectedPatient;
@@ -30,7 +31,7 @@ namespace ClinicalApplications.ViewModels
         private static string F(double v) => double.IsNaN(v) ? "" : v.ToString("0.###", CultureInfo.InvariantCulture);
         private static string I(int v) => v.ToString(CultureInfo.InvariantCulture);
 
-        private string _prompt = "Generate a simple weekly walking plan for a breast cancer survivor after surgery.";
+        private string _prompt = "";
         public string Prompt
         {
             get => _prompt;
@@ -56,8 +57,8 @@ namespace ClinicalApplications.ViewModels
         {
 
             _gptRequests = new GPTRequests("gpt-5");
+            _guard = new PlanGuardrails { MaxDailySteps = 9000, MaxDailyActiveMinutes = 40, MaxRpe = 5, MaxWeeklyIncreasePercent = 15 };
             _riskClient = new CtrcdRiskClient();
-
             SendRequestCommand = new AsyncRelayCommand(async () =>
             {
                 try
@@ -75,6 +76,27 @@ namespace ClinicalApplications.ViewModels
         {
             var res = await _riskClient.PredictAsync(patient, threshold: 0.28);
             Reply = $"Probability: {res.Prob}, Probability: {res.Pred}, Threshold: {res.Threshold}";
+        }
+        private async void AskGPT()
+        {
+            try
+            {
+                Reply = "Analyzing...";
+                Reply = await _gptRequests.GeneratePersonalizedPlanAsync(
+                            patient: SelectedPatient!,
+                            guardrails: _guard,
+                            avgStepsPerDay: 4500,
+                            avgActiveMinutesPerDay: 22,
+                            avgRestingHr: 72,
+                            avgFatigueScore: 2,
+                            baselineCapacity: "walks 15–20 min/day",
+                            extraRestrictions: new[] { "post-surgery scar discomfort" }
+                            );
+            }
+            catch (Exception ex)
+            {
+                Reply = "Error: " + ex.Message;
+            }
         }
 
         public async Task LoadPatientFromCsvAsync(string path)
@@ -134,6 +156,7 @@ namespace ClinicalApplications.ViewModels
 
                 SelectedPatient = p;
                 UpdatePatientDisplay();
+                AskGPT();
                 StatusMessage = $"Loaded patient from CSV: Age={p.Age}, LVEF={p.LVEF}";
             }
             catch (Exception ex)

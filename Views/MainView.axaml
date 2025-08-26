@@ -5,65 +5,85 @@
     x:Class="ClinicalApplications.Views.MainView"
     x:DataType="vm:MainViewViewModel">
 
-  <Grid Margin="16"
-        RowDefinitions="Auto,Auto,*,Auto"
-        ColumnDefinitions="Auto,*,Auto">
+  <Grid Margin="16" RowDefinitions="Auto,*">
 
-    <DataGrid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
-              ItemsSource="{Binding PatientDisplay}"
-              IsReadOnly="True"
-              AutoGenerateColumns="False"
-              HeadersVisibility="Column"
-              CanUserReorderColumns="False"
-              CanUserResizeColumns="True"
-              CanUserSortColumns="False"
-              Margin="0,0,0,12"
-              MaxHeight="240">
-      <DataGrid.Columns>
+    <Expander Grid.Row="0"
+              IsExpanded="True"
+              Header="Actions"
+              Padding="12"
+              Margin="0,0,0,12">
+      <Grid ColumnDefinitions="Auto,*,Auto"
+            RowDefinitions="Auto,Auto">
 
-        <DataGridTemplateColumn Header="Field" Width="2*">
-          <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <TextBlock Text="{Binding Label}">
-                <ToolTip.Tip>
-                  <TextBlock Text="{Binding Tooltip}" TextWrapping="Wrap" MaxWidth="360"/>
-                </ToolTip.Tip>
-              </TextBlock>
-            </DataTemplate>
-          </DataGridTemplateColumn.CellTemplate>
-        </DataGridTemplateColumn>
+        <Button Grid.Row="0" Grid.Column="0"
+                Content="Upload Patient CSV"
+                Click="OnUploadCsvClicked"
+                HorizontalAlignment="Left"/>
 
-        <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*"/>
-      </DataGrid.Columns>
-    </DataGrid>
+        <TextBox Grid.Row="0" Grid.Column="1"
+                 Text="{Binding Prompt, Mode=TwoWay}"
+                 Watermark="Type your prompt here..."
+                 MinWidth="420"/>
 
-    <Button Grid.Row="1" Grid.Column="0"
-            Content="Upload CSV"
-            Click="OnUploadCsvClicked"
-            HorizontalAlignment="Left"
-            Margin="0,0,8,8"/>
+        <Button Grid.Row="0" Grid.Column="2"
+                Content="Send"
+                Command="{Binding SendRequestCommand}"
+                HorizontalAlignment="Right"/>
 
-    <TextBox Grid.Row="1" Grid.Column="1"
-             Text="{Binding Prompt, Mode=TwoWay}"
-             Watermark="Type your prompt here..."
-             MinWidth="400" Margin="0,0,0,8"/>
+      </Grid>
+    </Expander>
 
-    <Button Grid.Row="1" Grid.Column="2"
-            Content="Send to GPT"
-            Command="{Binding SendRequestCommand}"
-            HorizontalAlignment="Right" Margin="8,0,0,8"/>
+    <ScrollViewer Grid.Row="1"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="12">
 
-    <TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
-             Text="{Binding Reply}"
-             AcceptsReturn="True"
-             IsReadOnly="True"
-             TextWrapping="Wrap"
-             MinHeight="200"
-             ScrollViewer.VerticalScrollBarVisibility="Auto"
-             ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+        <Border CornerRadius="8" Padding="8" BorderThickness="1" Opacity="0.98">
+          <DataGrid ItemsSource="{Binding PatientDisplay}"
+                    IsReadOnly="True"
+                    AutoGenerateColumns="False"
+                    HeadersVisibility="Column"
+                    CanUserReorderColumns="False"
+                    CanUserResizeColumns="True"
+                    CanUserSortColumns="False"
+                    MinHeight="120" MaxHeight="260">
+            <DataGrid.Columns>
 
-    <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
-               Margin="0,8,0,0"
-               Text="{Binding StatusMessage}"/>
+              <DataGridTemplateColumn Header="Field" Width="2*">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Label}">
+                      <ToolTip.Tip>
+                        <TextBlock Text="{Binding Tooltip}" TextWrapping="Wrap" MaxWidth="360"/>
+                      </ToolTip.Tip>
+                    </TextBlock>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+
+              <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </Border>
+
+        <Border CornerRadius="8" Padding="8" BorderThickness="1">
+          <StackPanel>
+            <TextBlock Text="AI Advice:" FontWeight="SemiBold" Margin="0,0,0,6"/>
+            <TextBox Text="{Binding Reply}"
+                     AcceptsReturn="True"
+                     IsReadOnly="True"
+                     TextWrapping="Wrap"
+                     MinHeight="180"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+          </StackPanel>
+        </Border>
+
+        <Border CornerRadius="8" Padding="8" BorderThickness="1">
+          <TextBlock Text="{Binding StatusMessage}"/>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+
   </Grid>
 </UserControl>
