@@ -50,9 +50,64 @@ namespace ClinicalApplications.ViewModels
             get => _statusMessage;
             set => SetProperty(ref _statusMessage, value);
         }
+        private string _ctrcdSummary = "No prediction yet";
+        public string CtrcdSummary
+        {
+            get => _ctrcdSummary;
+            set => SetProperty(ref _ctrcdSummary, value);
+        }
+
+        private string _ctrcdDetail = "";
+        public string CtrcdDetail
+        {
+            get => _ctrcdDetail;
+            set
+            {
+                if (SetProperty(ref _ctrcdDetail, value))
+                    OnPropertyChanged(nameof(IsCtrcdDetailVisible));
+            }
+        }
+
+        public bool IsCtrcdDetailVisible => !string.IsNullOrWhiteSpace(_ctrcdDetail);
+
 
         public ICommand SendRequestCommand { get; }
+        private PlanJson? _plan;
+        public PlanJson? Plan
+        {
+            get => _plan;
+            set
+            {
+                if (SetProperty(ref _plan, value))
+                {
+                    PlanWeek.Clear();
+                    SafetyNotes.Clear();
+                    if (value?.week != null)
+                        foreach (var d in value.week) PlanWeek.Add(d);
+                    if (value?.safety_notes != null)
+                        foreach (var s in value.safety_notes) SafetyNotes.Add(s);
+                    PauseRule = value?.pause_rule ?? "";
+                    OnPropertyChanged(nameof(HasPlan));
+                    OnPropertyChanged(nameof(NoPlan));
+                    OnPropertyChanged(nameof(NoPlanText));
+                }
+            }
+        }
 
+        public ObservableCollection<DayPlan> PlanWeek { get; } = new();
+        public ObservableCollection<string> SafetyNotes { get; } = new();
+
+        private string _pauseRule = "";
+        public bool NoPlan => !HasPlan;
+
+        public string PauseRule
+        {
+            get => _pauseRule;
+            set => SetProperty(ref _pauseRule, value);
+        }
+
+        public bool HasPlan => PlanWeek.Count > 0;
+        public string NoPlanText => HasPlan ? "" : "No AI plan yet. Upload patient CSV to generate.";
         public MainViewViewModel()
         {
 
@@ -72,17 +127,20 @@ namespace ClinicalApplications.ViewModels
                 }
             });
         }
-        private async void TestRiskClient(Patient patient)
+        private async void AskRiskClient()
         {
-            var res = await _riskClient.PredictAsync(patient, threshold: 0.28);
-            Reply = $"Probability: {res.Prob}, Probability: {res.Pred}, Threshold: {res.Threshold}";
+            if (SelectedPatient is not null)
+            {
+                var res = await _riskClient.PredictAsync(SelectedPatient, threshold: 0.28);
+                CtrcdSummary = $"{res.Prob}";
+            }
         }
         private async void AskGPT()
         {
             try
             {
                 Reply = "Analyzing...";
-                Reply = await _gptRequests.GeneratePersonalizedPlanAsync(
+                var pj = await _gptRequests.GeneratePlanStructuredAsync(
                             patient: SelectedPatient!,
                             guardrails: _guard,
                             avgStepsPerDay: 4500,
@@ -92,6 +150,7 @@ namespace ClinicalApplications.ViewModels
                             baselineCapacity: "walks 15–20 min/day",
                             extraRestrictions: new[] { "post-surgery scar discomfort" }
                             );
+                Plan = pj;
             }
             catch (Exception ex)
             {
@@ -156,6 +215,7 @@ namespace ClinicalApplications.ViewModels
 
                 SelectedPatient = p;
                 UpdatePatientDisplay();
+                AskRiskClient();
                 AskGPT();
                 StatusMessage = $"Loaded patient from CSV: Age={p.Age}, LVEF={p.LVEF}";
             }
@@ -249,5 +309,7 @@ namespace ClinicalApplications.ViewModels
             try { await _execute(); }
             finally { _isExecuting = false; CanExecuteChanged?.Invoke(this, EventArgs.Empty); }
         }
+
     }
+        
 }

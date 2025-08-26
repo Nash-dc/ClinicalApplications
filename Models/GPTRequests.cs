@@ -5,6 +5,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace ClinicalApplications.Models
 {
@@ -25,18 +27,7 @@ namespace ClinicalApplications.Models
             _chat = new ChatClient(model, apiKey);
         }
 
-        /// <summary>
-        /// 基于 Patient（临床静态信息）+ 可选近期指标 生成一周个性化运动计划
-        /// </summary>
-        /// <param name="patient">你的 Patient 实例（必填）</param>
-        /// <param name="guardrails">本地安全边界（必填）</param>
-        /// <param name="avgStepsPerDay">可选：近7日平均步数</param>
-        /// <param name="avgActiveMinutesPerDay">可选：近7日平均活动分钟</param>
-        /// <param name="avgRestingHr">可选：近7日静息心率</param>
-        /// <param name="avgFatigueScore">可选：近7日疲劳评分(1-5)</param>
-        /// <param name="baselineCapacity">可选：基线能力描述，如 "walks 20–30 min/day"</param>
-        /// <param name="extraRestrictions">可选：额外限制/注意事项文本列表</param>
-        public async Task<string> GeneratePersonalizedPlanAsync(
+        public async Task<PlanJson?> GeneratePlanStructuredAsync(
             Patient patient,
             PlanGuardrails guardrails,
             int? avgStepsPerDay = null,
@@ -45,50 +36,53 @@ namespace ClinicalApplications.Models
             int? avgFatigueScore = null,
             string? baselineCapacity = null,
             IEnumerable<string>? extraRestrictions = null)
-        {
-            var (bmi, therapyGroup, comorbidityScore) = DerivePatientFeatures(patient);
+            {
+                var (bmi, therapyGroup, comorbidityScore) = DerivePatientFeatures(patient);
+                var restrictionsList = BuildRestrictions(patient, extraRestrictions);
+                var restrictionsText = restrictionsList.Count == 0 ? "none" : string.Join("; ", restrictionsList);
 
-            var restrictionsList = BuildRestrictions(patient, extraRestrictions);
-            var restrictionsText = restrictionsList.Count == 0 ? "none" : string.Join("; ", restrictionsList);
-
-            var system = """
+                var system = """
                 You are a clinical exercise planning assistant for post-cancer recovery.
-                Produce short, actionable weekly plans: daily step target, active minutes,
-                RPE intensity range, and 3–5 bullet safety notes.
-                Strictly avoid medical diagnosis or drug advice.
-                Output concise English, ≤ 180 words.
+                Output MUST be a single JSON object ONLY. No markdown, no prose, no code fences.
+                JSON schema:
+                {
+                  "version": "1.0",
+                  "week": [
+                    {"day":"Mon","steps":int,"active_minutes":int,"rpe":"x-y"},
+                    ... Tue..Sun ...
+                  ],
+                  "safety_notes": ["...", "..."],
+                  "pause_rule": "..."
+                }
+                Constraints:
+                - steps ≤ MaxDailySteps; active_minutes ≤ MaxDailyActiveMinutes; rpe format "a-b" with 1≤a≤b≤MaxRpe.
+                - 7 entries in week for Mon..Sun.
+                - 3–5 safety_notes, concise.
                 """;
 
-            var user = $"""
-                Patient (breast cancer context):
-                - Age: {patient.Age} years
-                - BMI: {(double.IsNaN(bmi) ? "unknown" : bmi.ToString("0.0", CultureInfo.InvariantCulture))}
-                - LVEF: {patient.LVEF} %
-                - Heart rate: {patient.HeartRate} bpm, rhythm: {(patient.HeartRhythm == 1 ? "AF" : "sinus")}
-                - LV geometry: PWT {patient.PWT} cm; LAd {patient.LAd} cm; LVDd {patient.LVDd} cm; LVSd {patient.LVSd} cm
+                    var user = $"""
+                Patient:
+                - Age {patient.Age} y; BMI {(double.IsNaN(bmi) ? "unknown" : bmi.ToString("0.0", CultureInfo.InvariantCulture))}
+                - LVEF {patient.LVEF}%; HR {patient.HeartRate} bpm; rhythm {(patient.HeartRhythm == 1 ? "AF" : "sinus")}
+                - LV geom: PWT {patient.PWT} cm; LAd {patient.LAd} cm; LVDd {patient.LVDd} cm; LVSd {patient.LVSd} cm
                 - Onco-therapy: {therapyGroup} (AC={patient.AC}, antiHER2={patient.AntiHER2}, ACprev={patient.ACprev}, antiHER2prev={patient.AntiHER2prev})
-                - Comorbidity score: {comorbidityScore} (HTA, DL, DM, smoker/ex, CIprev, ICMprev, ARRprev, VALVprev, cxvalv)
-                - Baseline capacity: {baselineCapacity ?? "unknown"}
+                - Comorbidity score: {comorbidityScore}
+                - Baseline: {baselineCapacity ?? "unknown"}
                 - Restrictions: {restrictionsText}
 
-                Recent 7-day metrics (optional):
-                - Avg steps/day: {(avgStepsPerDay?.ToString() ?? "unknown")}
-                - Avg active minutes/day: {(avgActiveMinutesPerDay?.ToString() ?? "unknown")}
-                - Resting HR (avg): {(avgRestingHr?.ToString() ?? "unknown")}
-                - Fatigue score (1-5, avg): {(avgFatigueScore?.ToString() ?? "unknown")}
+                Recent 7-day:
+                - steps/day: {(avgStepsPerDay?.ToString() ?? "unknown")}
+                - active_minutes/day: {(avgActiveMinutesPerDay?.ToString() ?? "unknown")}
+                - resting HR: {(avgRestingHr?.ToString() ?? "unknown")}
+                - fatigue (1-5): {(avgFatigueScore?.ToString() ?? "unknown")}
 
-                Safety guardrails (must obey):
-                - Daily step target <= {guardrails.MaxDailySteps}
-                - Daily active minutes <= {guardrails.MaxDailyActiveMinutes}
-                - RPE range max <= {guardrails.MaxRpe}
-                - Weekly step increase <= {guardrails.MaxWeeklyIncreasePercent}% vs current baseline
-                - Must honor listed restrictions
+                Guardrails:
+                - MaxDailySteps={guardrails.MaxDailySteps}
+                - MaxDailyActiveMinutes={guardrails.MaxDailyActiveMinutes}
+                - MaxRpe={guardrails.MaxRpe}
+                - MaxWeeklyIncreasePercent={guardrails.MaxWeeklyIncreasePercent}
 
-                Task:
-                1) Propose a one-week plan (Mon–Sun): daily step target, active minutes, RPE range.
-                2) Provide 3–5 safety notes considering therapy and comorbidities.
-                3) End with a one-line “when to pause and contact clinician” rule.
-                4) Do NOT exceed guardrails. Use gradual progression if baseline is low.
+                Return JSON only.
                 """;
 
             var completion = await _chat.CompleteChatAsync(new ChatMessage[]
@@ -97,12 +91,59 @@ namespace ClinicalApplications.Models
                 new UserChatMessage(user)
             });
 
-            string planText = (completion.Value.Content.Count > 0 && completion.Value.Content[0].Text is { } txt)
-                ? txt
-                : "Plan generation failed.";
+            var raw = (completion.Value.Content.Count > 0 && completion.Value.Content[0].Text is { } txt) ? txt : null;
+            if (string.IsNullOrWhiteSpace(raw)) return null;
 
-            planText = ApplyLocalGuardrails(planText, guardrails);
-            return planText;
+            var m = Regex.Match(raw, @"\{[\s\S]*\}");
+            if (!m.Success) return null;
+            var json = m.Value;
+
+            PlanJson? plan;
+            try
+            {
+                plan = JsonSerializer.Deserialize<PlanJson>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch
+            {
+                return null;
+            }
+            if (plan is null) return null;
+
+            if (plan.week == null || plan.week.Count != 7) return null;
+
+            var daysOrder = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+            var rpeRegex = new Regex(@"^\d-\d$");
+            for (int i = 0; i < 7; i++)
+            {
+                var d = plan.week[i];
+                if (!string.Equals(d.day, daysOrder[i], StringComparison.OrdinalIgnoreCase))
+                    d.day = daysOrder[i];
+
+                d.steps = Math.Max(0, Math.Min(guardrails.MaxDailySteps, d.steps));
+                d.active_minutes = Math.Max(0, Math.Min(guardrails.MaxDailyActiveMinutes, d.active_minutes));
+
+                if (!rpeRegex.IsMatch(d.rpe))
+                    d.rpe = $"1-{guardrails.MaxRpe}";
+                else
+                {
+                    var parts = d.rpe.Split('-');
+                    int lo = int.Parse(parts[0]), hi = int.Parse(parts[1]);
+                    lo = Math.Max(1, Math.Min(guardrails.MaxRpe, lo));
+                    hi = Math.Max(lo, Math.Min(guardrails.MaxRpe, hi));
+                    d.rpe = $"{lo}-{hi}";
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(plan.pause_rule))
+                plan.pause_rule = "Pause if chest pain, dizziness, or severe dyspnea occurs, and contact clinician.";
+
+            if (plan.safety_notes == null || plan.safety_notes.Count == 0)
+                plan.safety_notes = new List<string> { "Warm-up & cool-down", "Hydrate", "Stop if unusual symptoms" };
+
+            return plan;
         }
 
         public async Task<string> AskAsync(string prompt)
