@@ -6,26 +6,54 @@
     x:DataType="vm:MainViewViewModel">
 
   <Grid Margin="16"
-        RowDefinitions="Auto,*,Auto"
+        RowDefinitions="Auto,Auto,*,Auto"
         ColumnDefinitions="Auto,*,Auto">
 
-    <Button Grid.Row="0" Grid.Column="0"
+    <DataGrid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+              ItemsSource="{Binding PatientDisplay}"
+              IsReadOnly="True"
+              AutoGenerateColumns="False"
+              HeadersVisibility="Column"
+              CanUserReorderColumns="False"
+              CanUserResizeColumns="True"
+              CanUserSortColumns="False"
+              Margin="0,0,0,12"
+              MaxHeight="240">
+      <DataGrid.Columns>
+
+        <DataGridTemplateColumn Header="Field" Width="2*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Label}">
+                <ToolTip.Tip>
+                  <TextBlock Text="{Binding Tooltip}" TextWrapping="Wrap" MaxWidth="360"/>
+                </ToolTip.Tip>
+              </TextBlock>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+
+        <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*"/>
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <Button Grid.Row="1" Grid.Column="0"
             Content="Upload CSV"
             Click="OnUploadCsvClicked"
             HorizontalAlignment="Left"
             Margin="0,0,8,8"/>
 
-    <TextBox Grid.Row="0" Grid.Column="1"
+    <TextBox Grid.Row="1" Grid.Column="1"
              Text="{Binding Prompt, Mode=TwoWay}"
              Watermark="Type your prompt here..."
              MinWidth="400" Margin="0,0,0,8"/>
 
-    <Button Grid.Row="0" Grid.Column="2"
+    <Button Grid.Row="1" Grid.Column="2"
             Content="Send to GPT"
             Command="{Binding SendRequestCommand}"
             HorizontalAlignment="Right" Margin="8,0,0,8"/>
 
-    <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+    <TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
              Text="{Binding Reply}"
              AcceptsReturn="True"
              IsReadOnly="True"
@@ -34,7 +62,7 @@
              ScrollViewer.VerticalScrollBarVisibility="Auto"
              ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
 
-    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+    <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
                Margin="0,8,0,0"
                Text="{Binding StatusMessage}"/>
   </Grid>

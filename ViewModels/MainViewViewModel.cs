@@ -1,11 +1,12 @@
 ﻿using ClinicalApplications.Models;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Threading.Tasks;
 using System.IO;
-using System.Windows.Input;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace ClinicalApplications.ViewModels
 {
@@ -13,6 +14,21 @@ namespace ClinicalApplications.ViewModels
     {
         private readonly GPTRequests _gptRequests;
         private readonly CtrcdRiskClient _riskClient;
+        public ObservableCollection<DisplayField> PatientDisplay { get; } = new();
+        private Patient? _selectedPatient;
+        public Patient? SelectedPatient
+        {
+            get => _selectedPatient;
+            set
+            {
+                if (SetProperty(ref _selectedPatient, value))
+                {
+                    UpdatePatientDisplay();
+                }
+            }
+        }
+        private static string F(double v) => double.IsNaN(v) ? "" : v.ToString("0.###", CultureInfo.InvariantCulture);
+        private static string I(int v) => v.ToString(CultureInfo.InvariantCulture);
 
         private string _prompt = "Generate a simple weekly walking plan for a breast cancer survivor after surgery.";
         public string Prompt
@@ -27,13 +43,6 @@ namespace ClinicalApplications.ViewModels
             get => _reply;
             set => SetProperty(ref _reply, value);
         }
-        private Patient? _selectedPatient;
-        public Patient? SelectedPatient
-        {
-            get => _selectedPatient;
-            set => SetProperty(ref _selectedPatient, value);
-        }
-
         private string? _statusMessage;
         public string? StatusMessage
         {
@@ -124,7 +133,7 @@ namespace ClinicalApplications.ViewModels
                 };
 
                 SelectedPatient = p;
-                TestRiskClient(p);
+                UpdatePatientDisplay();
                 StatusMessage = $"Loaded patient from CSV: Age={p.Age}, LVEF={p.LVEF}";
             }
             catch (Exception ex)
@@ -132,7 +141,41 @@ namespace ClinicalApplications.ViewModels
                 StatusMessage = "CSV parse error: " + ex.Message;
             }
         }
+        public void UpdatePatientDisplay()
+        {
+            PatientDisplay.Clear();
+            var p = SelectedPatient;
+            if (p is null) return;
 
+            void Add(string label, string val, string tip)
+                => PatientDisplay.Add(new DisplayField { Label = label, Value = val, Tooltip = tip });
+
+            Add("Age (years)", I(p.Age), "Patient age in years. Higher age is associated with higher cardiotoxicity risk.");
+            Add("Weight (kg)", F(p.Weight), "Body weight in kilograms. Used to calculate BMI and assess metabolic health.");
+            Add("Height (cm)", F(p.Height), "Body height in centimeters. Used with weight to compute BMI.");
+            Add("LVEF (%)", F(p.LVEF), "Left Ventricular Ejection Fraction. Lower values indicate impaired cardiac function.");
+            Add("Heart rate (bpm)", I(p.HeartRate), "Resting heart rate (beats per minute). Tachycardia/bradycardia may signal stress.");
+            Add("Heart rhythm (0/1)", I(p.HeartRhythm), "0 = sinus rhythm; 1 = atrial fibrillation. AF increases complications risk.");
+            Add("PWT (cm)", F(p.PWT), "Posterior Wall Thickness of LV. Hypertrophy may reflect chronic stress.");
+            Add("LAd (cm)", F(p.LAd), "Left Atrial diameter. Enlargement suggests chronic pressure/volume overload.");
+            Add("LVDd (cm)", F(p.LVDd), "Left Ventricular Diastolic diameter. Chamber size during relaxation/diastole.");
+            Add("LVSd (cm)", F(p.LVSd), "Left Ventricular Systolic diameter. Larger values may reflect poor contractility.");
+            Add("AC (0/1)", I(p.AC), "Current anthracycline therapy. Anthracyclines are strongly cardiotoxic.");
+            Add("antiHER2 (0/1)", I(p.AntiHER2), "Current anti-HER2 therapy (e.g., trastuzumab). Associated with LV dysfunction.");
+            Add("ACprev (0/1)", I(p.ACprev), "History of anthracycline exposure. Cumulative exposure increases risk.");
+            Add("antiHER2prev (0/1)", I(p.AntiHER2prev), "History of anti-HER2 therapy. Past exposure may leave residual injury.");
+            Add("HTA (0/1)", I(p.HTA), "Hypertension. A known comorbidity increasing vulnerability.");
+            Add("DL (0/1)", I(p.DL), "Dyslipidemia. Contributes to atherosclerosis and cardiac risk.");
+            Add("DM (0/1)", I(p.DM), "Diabetes mellitus. Strong risk factor for cardiovascular disease.");
+            Add("Smoker (0/1)", I(p.Smoker), "Current smoking status. Harms vascular and cardiac function.");
+            Add("Ex-smoker (0/1)", I(p.ExSmoker), "Former smoker status. Residual risk may remain.");
+            Add("RTprev (0/1)", I(p.RTprev), "Previous thoracic radiotherapy. Radiation can induce cardiotoxicity.");
+            Add("CIprev (0/1)", I(p.CIprev), "Previous cardiac insufficiency (heart failure). Strong predictor of decline.");
+            Add("ICMprev (0/1)", I(p.ICMprev), "Previous ischemic cardiomyopathy. Indicates established coronary disease.");
+            Add("ARRprev (0/1)", I(p.ARRprev), "Previous arrhythmia. Electrical instability under therapy.");
+            Add("VALVprev (0/1)", I(p.VALVprev), "Previous valvulopathy. Valve disease worsens chemo-related dysfunction.");
+            Add("cxvalv (0/1)", I(p.Cxvalv), "Previous valve surgery. Reflects significant prior cardiac intervention.");
+        }
         private static int GetInt(Dictionary<string, string> d, string key, int def = 0)
         {
             if (d.TryGetValue(key, out var s) && int.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
@@ -151,7 +194,7 @@ namespace ClinicalApplications.ViewModels
             return def;
         }
 
-        protected bool SetProperty<T>(ref T storage, T value, string propertyName = null)
+        protected bool SetProperty<T>(ref T storage, T value, string? propertyName = null)
         {
             if (Equals(storage, value)) return false;
             storage = value;
