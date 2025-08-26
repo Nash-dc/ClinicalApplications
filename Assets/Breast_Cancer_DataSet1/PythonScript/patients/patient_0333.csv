@@ -1,0 +1,2 @@
+age,weight,height,LVEF,heart_rate,heart_rhythm,PWT,LAd,LVDd,LVSd,AC,antiHER2,ACprev,antiHER2prev,HTA,DL,DM,smoker,exsmoker,RTprev,CIprev,ICMprev,ARRprev,VALVprev,cxvalv
+57.0,53.0,156.5,60.58073916,59.0,0.0,0.592067989,2.946175637,4.362606232,2.960339943,1.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,,1.0,0.0,0.0,0.0,0.0,0.0
