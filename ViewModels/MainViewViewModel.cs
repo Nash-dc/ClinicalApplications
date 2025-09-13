@@ -127,14 +127,22 @@ namespace ClinicalApplications.ViewModels
                 }
             });
         }
-        private async void AskRiskClient()
+        private async Task AskRiskClient()
         {
             if (SelectedPatient is not null)
             {
-                var res = await _riskClient.PredictAsync(SelectedPatient, threshold: 0.28);
-                CtrcdSummary = $"{res.Prob}";
+                var res = await _riskClient.PredictSafeAsync(SelectedPatient, threshold: 0.28);
+                if (res != null)
+                {
+                    CtrcdSummary = $"{res.Prob}";
+                }
+                else
+                {
+                    CtrcdSummary = "Prediction failed or service not available.";
+                }
             }
         }
+
         private async void AskGPT()
         {
             try
