@@ -82,11 +82,31 @@ namespace ClinicalApplications.ViewModels
                 {
                     PlanWeek.Clear();
                     SafetyNotes.Clear();
+                    WeightNotes.Clear();
+                    UpperLimbNotes.Clear();
+                    PsychologicalNotes.Clear();
+                    SleepNotes.Clear();
+
                     if (value?.week != null)
                         foreach (var d in value.week) PlanWeek.Add(d);
+
                     if (value?.safety_notes != null)
                         foreach (var s in value.safety_notes) SafetyNotes.Add(s);
+
+                    if (value?.weight_notes != null)
+                        foreach (var w in value.weight_notes) WeightNotes.Add(w);
+
+                    if (value?.upper_limb_notes != null)
+                        foreach (var u in value.upper_limb_notes) UpperLimbNotes.Add(u);
+
+                    if (value?.psychological_notes != null)
+                        foreach (var p in value.psychological_notes) PsychologicalNotes.Add(p);
+
+                    if (value?.sleep_notes != null)
+                        foreach (var sl in value.sleep_notes) SleepNotes.Add(sl);
+
                     PauseRule = value?.pause_rule ?? "";
+
                     OnPropertyChanged(nameof(HasPlan));
                     OnPropertyChanged(nameof(NoPlan));
                     OnPropertyChanged(nameof(NoPlanText));
@@ -97,9 +117,13 @@ namespace ClinicalApplications.ViewModels
         public ObservableCollection<DayPlan> PlanWeek { get; } = new();
         public ObservableCollection<string> SafetyNotes { get; } = new();
 
-        private string _pauseRule = "";
-        public bool NoPlan => !HasPlan;
+        // new collections for extra note fields
+        public ObservableCollection<string> WeightNotes { get; } = new();
+        public ObservableCollection<string> UpperLimbNotes { get; } = new();
+        public ObservableCollection<string> PsychologicalNotes { get; } = new();
+        public ObservableCollection<string> SleepNotes { get; } = new();
 
+        private string _pauseRule = "";
         public string PauseRule
         {
             get => _pauseRule;
@@ -107,7 +131,9 @@ namespace ClinicalApplications.ViewModels
         }
 
         public bool HasPlan => PlanWeek.Count > 0;
+        public bool NoPlan => !HasPlan;
         public string NoPlanText => HasPlan ? "" : "No AI plan yet. Upload patient CSV to generate.";
+
         public MainViewViewModel()
         {
 
