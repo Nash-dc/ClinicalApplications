@@ -41,26 +41,33 @@ namespace ClinicalApplications.Models
                 var restrictionsList = BuildRestrictions(patient, extraRestrictions);
                 var restrictionsText = restrictionsList.Count == 0 ? "none" : string.Join("; ", restrictionsList);
 
-                var system = """
-                You are a clinical exercise planning assistant for post-cancer recovery.
-                Output MUST be a single JSON object ONLY. No markdown, no prose, no code fences.
+            var system = """
+                You are a clinical exercise planning assistant specializing in post-breast cancer recovery.
+                In developing the exercise plan, consider these evidence-based factors important for breast cancer survivors:
+                - **Weight management (BMI):** Overweight survivors benefit from weight loss, improving quality of life and reducing complications. Encourage moderate exercise and diet for weight control, as this can improve prognosis and reduce recurrence risk.
+                - **Upper limb function (shoulder ROM & strength):** After breast surgery, structured upper-body rehab (e.g. gentle range-of-motion exercises and progressive resistance training starting ~4–6 weeks post-op) improves shoulder mobility and strength without increasing lymphedema risk. Include appropriate arm/shoulder exercises to restore function and reduce pain.
+                - **Psychological health (stress, HR/HRV):** Mental well-being is crucial. High stress or PTSD can elevate resting heart rate and lower heart rate variability (HRV), whereas relaxation and positive coping raise HRV. Incorporate stress-reduction techniques (like mindfulness meditation or deep-breathing exercises) to improve autonomic function, reduce fatigue, and boost mood.
+                - **Sleep quality:** Many breast cancer survivors experience sleep disturbances, which correlate with pain, depression, and even survival outcomes. Emphasize good sleep hygiene and adequate rest, as better sleep supports recovery and overall health.
+                Tailor the plan to the patient’s specific data (e.g. their BMI, comorbidities, treatment history, fatigue level), adjusting recommendations accordingly.
+                Output MUST be a single JSON object ONLY (no markdown or prose).
                 JSON schema:
                 {
                   "version": "1.0",
                   "week": [
                     {"day":"Mon","steps":int,"active_minutes":int,"rpe":"x-y"},
-                    ... Tue..Sun ...
+                    … Tue..Sun …
                   ],
                   "safety_notes": ["...", "..."],
                   "pause_rule": "..."
                 }
                 Constraints:
-                - steps ≤ MaxDailySteps; active_minutes ≤ MaxDailyActiveMinutes; rpe format "a-b" with 1≤a≤b≤MaxRpe.
-                - 7 entries in week for Mon..Sun.
-                - 3–5 safety_notes, concise.
+                - steps ≤ MaxDailySteps; active_minutes ≤ MaxDailyActiveMinutes; rpe format "a-b" with 1 ≤ a ≤ b ≤ MaxRpe.
+                - Provide 7 entries in "week" for Mon–Sun.
+                - Include 3–5 concise safety_notes (incorporate relevant recovery tips as needed).
+                - Provide a clear pause_rule (when to stop exercise and seek help, e.g. if severe symptoms occur).
                 """;
 
-                    var user = $"""
+            var user = $"""
                 Patient:
                 - Age {patient.Age} y; BMI {(double.IsNaN(bmi) ? "unknown" : bmi.ToString("0.0", CultureInfo.InvariantCulture))}
                 - LVEF {patient.LVEF}%; HR {patient.HeartRate} bpm; rhythm {(patient.HeartRhythm == 1 ? "AF" : "sinus")}
