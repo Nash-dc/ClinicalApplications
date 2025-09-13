@@ -7,7 +7,6 @@
 
   <DockPanel LastChildFill="True">
 
-    <!-- 顶部工具栏 -->
     <Border DockPanel.Dock="Top" Background="#F7F7F9" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="8">
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Spacing="8">
         <Button Content="Upload CSV" Click="OnUploadCsvClicked"/>
@@ -16,10 +15,8 @@
       </StackPanel>
     </Border>
 
-    <!-- 主体区域，上下滚动 -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
       <Grid ColumnDefinitions="1*,1*" Margin="12">
-        <!-- 左：患者信息 -->
         <StackPanel Grid.Column="0" Spacing="12">
           <Border CornerRadius="8" Padding="8" BorderThickness="1" BorderBrush="#E3E6EA" Background="#FFFFFFFF">
             <DataGrid ItemsSource="{Binding PatientDisplay}"
@@ -57,8 +54,10 @@
           </Border>
         </StackPanel>
 
-        <!-- 右：AI Plan -->
+        <!-- Right：AI Plan -->
         <StackPanel Grid.Column="1" Spacing="12">
+
+          <!-- Weekly Plan Table -->
           <Border CornerRadius="10" Padding="12" BorderThickness="1" BorderBrush="#D9E6FF" Background="#F0F6FF">
             <StackPanel>
               <TextBlock Text="AI Weekly Exercise Plan" FontWeight="Bold" FontSize="14"/>
@@ -84,19 +83,21 @@
             </StackPanel>
           </Border>
 
+          <!-- Safety Notes -->
           <Border CornerRadius="10" Padding="12" BorderThickness="1" BorderBrush="#FFE2C2" Background="#FFF9EE">
             <StackPanel>
               <TextBlock Text="Safety Notes" FontWeight="Bold" FontSize="14"/>
               <ItemsControl ItemsSource="{Binding SafetyNotes}" IsVisible="{Binding HasPlan}" Margin="0,6,0,0">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
-                    <WrapPanel/>
+                    <StackPanel Orientation="Vertical"/>
                   </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Border Background="#FFEED6" CornerRadius="999" Padding="8,4" Margin="0,6,6,0" BorderBrush="#FFD7A8" BorderThickness="1">
-                      <TextBlock Text="{Binding}"/>
+                    <Border Background="#FFEED6" CornerRadius="8" Padding="8,6" Margin="0,6,0,0"
+                            BorderBrush="#FFD7A8" BorderThickness="1">
+                      <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -104,13 +105,112 @@
             </StackPanel>
           </Border>
 
-          <Border CornerRadius="10" Padding="10" BorderThickness="1" BorderBrush="#FFB8B8" Background="#FFF0F0">
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Text="⚠" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
-              <TextBlock Text="{Binding PauseRule}" TextWrapping="Wrap"/>
+          <!-- Weight Notes -->
+          <Border CornerRadius="10" Padding="12" BorderThickness="1" BorderBrush="#C2E5FF" Background="#F0FAFF">
+            <StackPanel>
+              <TextBlock Text="Weight / BMI Notes" FontWeight="Bold" FontSize="14"/>
+              <ItemsControl ItemsSource="{Binding WeightNotes}" IsVisible="{Binding HasPlan}" Margin="0,6,0,0">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Background="#D6F0FF" CornerRadius="8" Padding="8,6" Margin="0,6,0,0"
+                            BorderBrush="#A8DFFF" BorderThickness="1">
+                      <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </StackPanel>
           </Border>
+
+          <!-- Upper Limb Notes -->
+          <Border CornerRadius="10" Padding="12" BorderThickness="1" BorderBrush="#E2C2FF" Background="#F9F0FF">
+            <StackPanel>
+              <TextBlock Text="Upper Limb Notes" FontWeight="Bold" FontSize="14"/>
+              <ItemsControl ItemsSource="{Binding UpperLimbNotes}" IsVisible="{Binding HasPlan}" Margin="0,6,0,0">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Background="#EED6FF" CornerRadius="8" Padding="8,6" Margin="0,6,0,0"
+                            BorderBrush="#D7A8FF" BorderThickness="1">
+                      <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <!-- Psychological Notes -->
+          <Border CornerRadius="10" Padding="12" BorderThickness="1" BorderBrush="#C2FFD8" Background="#F0FFF6">
+            <StackPanel>
+              <TextBlock Text="Psychological Notes" FontWeight="Bold" FontSize="14"/>
+              <ItemsControl ItemsSource="{Binding PsychologicalNotes}" IsVisible="{Binding HasPlan}" Margin="0,6,0,0">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Background="#D6FFE6" CornerRadius="8" Padding="8,6" Margin="0,6,0,0"
+                            BorderBrush="#A8FFCC" BorderThickness="1">
+                      <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <!-- Sleep Notes -->
+          <Border CornerRadius="10" Padding="12" BorderThickness="1" BorderBrush="#FFD7C2" Background="#FFF5F0">
+            <StackPanel>
+              <TextBlock Text="Sleep Notes" FontWeight="Bold" FontSize="14"/>
+              <ItemsControl ItemsSource="{Binding SleepNotes}" IsVisible="{Binding HasPlan}" Margin="0,6,0,0">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Background="#FFE6D6" CornerRadius="8" Padding="8,6" Margin="0,6,0,0"
+                            BorderBrush="#FFC7A8" BorderThickness="1">
+                      <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+
+          <!-- Pause Rule -->
+          <Border CornerRadius="10" Padding="12" BorderThickness="1" BorderBrush="#FFB8B8" Background="#FFF0F0">
+            <StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="⚠" FontSize="16" VerticalAlignment="Center"/>
+                <TextBlock Text="Pause Rule" FontWeight="Bold" FontSize="14"/>
+              </StackPanel>
+
+              <Border Background="#FFD6D6" CornerRadius="8" Padding="8,6" Margin="0,6,0,0"
+                      BorderBrush="#FFAAAA" BorderThickness="1">
+                <TextBlock Text="{Binding PauseRule}" TextWrapping="Wrap"/>
+              </Border>
+            </StackPanel>
+          </Border>
+
         </StackPanel>
+
       </Grid>
     </ScrollViewer>
   </DockPanel>

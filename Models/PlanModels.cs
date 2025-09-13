@@ -16,5 +16,11 @@ namespace ClinicalApplications.Models
         public List<DayPlan> week { get; set; } = new();
         public List<string> safety_notes { get; set; } = new();
         public string pause_rule { get; set; } = "";
+
+        // Extended note fields
+        public List<string> weight_notes { get; set; } = new();
+        public List<string> upper_limb_notes { get; set; } = new();
+        public List<string> psychological_notes { get; set; } = new();
+        public List<string> sleep_notes { get; set; } = new();
     }
 }

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
@@ -23,26 +25,48 @@ namespace ClinicalApplications.Models
         };
 
         /// <param name="endpoint">default http://127.0.0.1:8000/predict</param>
-        /// <param name="http">HttpClient；create if null</param>
+        /// <param name="http">HttpClient; create if null</param>
         public CtrcdRiskClient(string endpoint = "http://127.0.0.1:8000/predict", HttpClient? http = null)
         {
             _endpoint = endpoint?.TrimEnd('/') ?? throw new ArgumentNullException(nameof(endpoint));
             _http = http ?? new HttpClient();
         }
 
+        /// <summary>
+        /// Safe prediction method. Shows a dialog if the service is not running or fails.
+        /// </summary>
+        public async Task<RiskResult?> PredictSafeAsync(Patient patient, double? threshold = null, CancellationToken ct = default)
+        {
+            if (patient == null)
+                throw new ArgumentNullException(nameof(patient));
+
+            if (!await HealthAsync(ct: ct))
+            {
+                await ShowAlertAsync("Model service is not running. Please start http://127.0.0.1:8000");
+                return null;
+            }
+
+            try
+            {
+                return await PredictAsync(patient, threshold, ct);
+            }
+            catch (Exception ex)
+            {
+                await ShowAlertAsync($"Failed to call model: {ex.Message}");
+                return null;
+            }
+        }
+
         public Task<RiskResult> PredictAsync(Patient patient, double? threshold = null, CancellationToken ct = default)
         {
-            if (patient == null) throw new ArgumentNullException(nameof(patient));
-
             var payload = new
             {
-                data = patient,          
+                data = patient,
                 threshold = threshold
             };
             return PostJsonAsync(payload, ct);
         }
 
-  
         public Task<RiskResult> PredictAsync(Dictionary<string, object> patientData, double? threshold = null, CancellationToken ct = default)
         {
             if (patientData is null || patientData.Count == 0)
@@ -70,7 +94,7 @@ namespace ClinicalApplications.Models
         }
 
         /// <summary>
-        /// Check if FastAPI is ready
+        /// Check if FastAPI service is healthy.
         /// </summary>
         public async Task<bool> HealthAsync(string healthUrl = "http://127.0.0.1:8000/health", CancellationToken ct = default)
         {
@@ -80,6 +104,16 @@ namespace ClinicalApplications.Models
                 return resp.IsSuccessStatusCode;
             }
             catch { return false; }
+        }
+
+        private async Task ShowAlertAsync(string msg)
+        {
+            var box = MessageBoxManager.GetMessageBoxStandard(
+                "Notice",
+                msg,
+                ButtonEnum.Ok,
+                Icon.Warning);
+            await box.ShowAsync();
         }
     }
 
